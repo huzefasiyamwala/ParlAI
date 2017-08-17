@@ -76,6 +76,14 @@ class Agent(object):
     def reset(self):
         self.observation = None
 
+    def reset_metrics(self):
+        pass
+
+    def save(self):
+        """If applicable, save any parameters needed to recreate this agent from
+        loaded parameters."""
+        pass
+
     def share(self):
         """If applicable, share any parameters needed to create a shared version
         of this agent.
@@ -89,13 +97,14 @@ class Agent(object):
         """Perform any final cleanup if needed."""
         pass
 
+
 class Teacher(Agent):
     """Basic Teacher agent which keeps track of how many times it's received
     messages. Teachers provide the ``report()`` method to get back metrics."""
 
     def __init__(self, opt, shared=None):
         if not hasattr(self, 'opt'):
-            self.opt = opt
+             self.opt = copy.deepcopy(opt)
         if not hasattr(self, 'id'):
             self.id = opt.get('task', 'teacher')
         if not hasattr(self, 'metrics'):
@@ -133,16 +142,18 @@ class Teacher(Agent):
 
     def reset(self):
         super().reset()
+        self.reset_metrics()
         self.epochDone = False
+
+    def reset_metrics(self):
         self.metrics.clear()
 
     def share(self):
-        """If applicable, share any parameters needed to create a shared version
-        of this agent.
-        """
+        """In addition to default Agent shared parameters, share metrics."""
         shared = super().share()
         shared['metrics'] = self.metrics
         return shared
+
 
 class MultiTaskTeacher(Teacher):
     """Creates a teacher that is actually a set of teachers each based on
@@ -242,12 +253,26 @@ class MultiTaskTeacher(Teacher):
         for t in self.tasks:
             t.reset()
 
+    def reset_metrics(self):
+        for t in self.tasks:
+            t.reset_metrics()
+
+    def save(self):
+        for t in self.tasks:
+            t.save()
+
     def share(self):
         shared = {}
         shared['class'] = type(self)
         shared['opt'] = self.opt
         shared['tasks'] = [t.share() for t in self.tasks]
         return shared
+
+    def shutdown(self):
+        """Shutdown each agent."""
+        for t in self.tasks:
+            t.shutdown()
+
 
 def name_to_agent_class(name):
     words = name.split('_')
@@ -279,8 +304,11 @@ def create_agent(opt):
     (i.e. the path followed by the class name) or else just ``ir_baseline`` which
     assumes the path above, and a class name suffixed with 'Agent'.
     """
-    model_class = get_agent_module(opt['model'])
-    return model_class(opt)
+    if opt.get('model'):
+        model_class = get_agent_module(opt['model'])
+        return model_class(opt)
+    else:
+        raise RuntimeError('Need to set `model` argument to use create_agent.')
 
 # Helper functions to create agent/agents given shared parameters
 # returned from agent.share(). Useful for parallelism, sharing params, etc.
@@ -296,6 +324,27 @@ def create_agents_from_shared(shared):
         shared_agents.append(agent)
     return shared_agents
 
+def get_task_module(taskname):
+    # get the module of the task agent
+    sp = taskname.strip().split(':')
+    if '.' in sp[0]:
+        module_name = sp[0]
+    else:
+        task = sp[0].lower()
+        module_name = "parlai.tasks.%s.agents" % (task)
+    if len(sp) > 1:
+        sp[1] = sp[1][0].upper() + sp[1][1:]
+        teacher = sp[1]
+        if '.' not in sp[0] and 'Teacher' not in teacher:
+            # Append "Teacher" to class name by default if
+            # a complete path is not given.
+            teacher += "Teacher"
+    else:
+        teacher = "DefaultTeacher"
+    my_module = importlib.import_module(module_name)
+    teacher_class = getattr(my_module, teacher)
+    return teacher_class
+
 def create_task_agent_from_taskname(opt):
     """Creates task agent(s) assuming the input ``task_dir:teacher_class``.
 
@@ -309,23 +358,7 @@ def create_task_agent_from_taskname(opt):
                            '--task {task_name}.')
     if ',' not in opt['task']:
         # Single task
-        sp = opt['task'].strip().split(':')
-        if '.' in sp[0]:
-            module_name = sp[0]
-        else:
-            task = sp[0].lower()
-            module_name = "parlai.tasks.%s.agents" % (task)
-        if len(sp) > 1:
-            sp[1] = sp[1][0].upper() + sp[1][1:]
-            teacher = sp[1]
-            if '.' not in sp[0] and 'Teacher' not in teacher:
-                # Append "Teacher" to class name by default if
-                # a complete path is not given.
-                teacher += "Teacher"
-        else:
-            teacher = "DefaultTeacher"
-        my_module = importlib.import_module(module_name)
-        teacher_class = getattr(my_module, teacher)
+        teacher_class = get_task_module(opt['task'])
         task_agents = teacher_class(opt)
         if type(task_agents) != list:
             task_agents = [task_agents]

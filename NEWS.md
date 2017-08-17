@@ -1,5 +1,21 @@
 <h2>News</h2>
 
+2017-08-15: [New task added: CLEVR](https://github.com/facebookresearch/ParlAI/blob/master/parlai/tasks/task_list.py)
+
+2017-07-20: [ParlAI Request For Proposals: Funding university teams - 7 awards are available - deadline Aug 25](https://research.fb.com/programs/research-awards/proposals/parlai/)
+
+2017-07-20: [added building an (seq2seq) agent tutorial](http://www.parl.ai/static/docs/seq2seq_tutorial.html)
+
+2017-07-12: [Several new tasks added: MS Marco, TriviaQA, InsuranceQA, personalized-dialog and MNIST_QA](https://github.com/facebookresearch/ParlAI/blob/master/parlai/tasks/task_list.py)
+
+2017-06-27: [ExecutableWorld class for interactive worlds with dialog](https://github.com/facebookresearch/ParlAI/pull/170)
+
+2017-06-21: [MTurk now supports multiple assignments per HIT](https://github.com/facebookresearch/ParlAI/pull/156)
+
+2017-06-20: [updated MTurk tutorial to reflect new design](http://parl.ai/static/docs/mturk.html)
+
+2017-06-20: [MTurk now uses general world and agent classes](https://github.com/facebookresearch/ParlAI/pull/128)
+
 2017-06-16: [added Creating a New Task tutorial](http://parl.ai/static/docs/task_tutorial.html)
 
 2017-05-31: [added Seq2Seq model](https://github.com/facebookresearch/ParlAI/pull/96)

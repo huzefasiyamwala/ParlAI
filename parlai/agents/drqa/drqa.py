@@ -190,7 +190,7 @@ class DrqaAgent(Agent):
         if ex is None:
             return reply
         batch = batchify(
-            [ex], null=self.word_dict['<NULL>'], cuda=self.opt['cuda']
+            [ex], null=self.word_dict[self.word_dict.null_token], cuda=self.opt['cuda']
         )
 
         # Either train or predict
@@ -223,7 +223,7 @@ class DrqaAgent(Agent):
 
         # Else, use what we have (hopefully everything).
         batch = batchify(
-            examples, null=self.word_dict['<NULL>'], cuda=self.opt['cuda']
+            examples, null=self.word_dict[self.word_dict.null_token], cuda=self.opt['cuda']
         )
 
         # Either train or predict
@@ -237,10 +237,12 @@ class DrqaAgent(Agent):
 
         return batch_reply
 
-    def save(self, filename):
+    def save(self, fname=None):
         """Save the parameters of the agent to a file."""
-        print("[ saving model: " + self.opt['model_file'] + " ]")
-        self.model.save(self.opt['model_file'])
+        fname = self.opt.get('model_file', None) if fname is None else fname
+        if fname:
+            print("[ saving model: " + fname + " ]")
+            self.model.save(fname)
 
     # --------------------------------------------------------------------------
     # Helper functions.
